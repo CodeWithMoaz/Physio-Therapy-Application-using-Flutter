@@ -9,6 +9,9 @@ The application supports rehabilitation for the knee, ankle, shoulder, and
 lower back. Its Firebase-backed data model supports patients, doctors, admins,
 programs, exercises, and AI-generated programs.
 
+## Video
+https://drive.google.com/drive/u/4/home
+
 > This application provides rehabilitation guidance and is not a replacement
 > for diagnosis or treatment from a qualified medical professional.
 
@@ -82,8 +85,7 @@ programs, exercises, and AI-generated programs.
    description, and treatment recommendations.
 
 
-##Video
-https://drive.google.com/drive/u/4/home
+
 
 
 ## Technology Stack
