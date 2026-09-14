@@ -326,11 +326,11 @@ Firebase project.
 
 ## Project Documents
 
-- [Project Presentation](docs/Moaz%20Presentation.pptx)
-- [Project Report](docs/Moaz%20Report.docx)
+- [Project Presentation](../Project%20Presentation/Moaz%20Presentation.pptx)
+- [Project Report](../Project%20Report/Moaz%20Report.docx)
 
-The `docs/` folder contains the presentation and written report for this
-project.
+The top-level `Project Presentation/` and `Project Report/` folders contain the
+presentation and written report independently from the Flutter project folder.
 
 ## Author
 
