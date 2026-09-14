@@ -6,6 +6,10 @@
 build/
 build_flutter/
 *.iml
+/.idea/
+**/.gradle/
+**/.cxx/
+**/ephemeral/
 
 # Local Python generated files
 .venv/
@@ -14,3 +18,15 @@ __pycache__/
 # Machine-specific configuration
 .env
 local.properties
+
+# Duplicate project directories generated or left at the repository root
+/android/
+/assets/
+/ios/
+/lib/
+/linux/
+/macos/
+/models/
+/test/
+/web/
+/windows/
