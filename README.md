@@ -12,6 +12,9 @@ programs, exercises, and AI-generated programs.
 > This application provides rehabilitation guidance and is not a replacement
 > for diagnosis or treatment from a qualified medical professional.
 
+<img width="1538" height="828" alt="{B200E19F-3E13-4028-86F5-67960B2FC25A}" src="https://github.com/user-attachments/assets/0dc33bb2-9634-414f-b0d2-a82825e06452" />
+
+
 ## Features
 
 ### Patient experience
