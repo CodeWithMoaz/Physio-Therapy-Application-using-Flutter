@@ -10,7 +10,7 @@ lower back. Its Firebase-backed data model supports patients, doctors, admins,
 programs, exercises, and AI-generated programs.
 
 ## Video
-https://drive.google.com/drive/u/4/home
+https://drive.google.com/file/d/1noaMPTIB0DRYVLwc_8z3GaF7Ncq7Lahe/view?usp=drive_link
 
 > This application provides rehabilitation guidance and is not a replacement
 > for diagnosis or treatment from a qualified medical professional.
