@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Shoulder Exercise Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            max-width: 1200px;
+            width: 95%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .exercise-area {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        #videoElement {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 20px;
+            transform: scaleX(-1);
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            transform: scaleX(-1);
+        }
+
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            height: fit-content;
+        }
+
+        .rep-counter {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .rep-number {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #ff6b6b;
+            text-shadow: 0 4px 15px rgba(255, 107, 107, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        .rep-label {
+            color: white;
+            font-size: 1.2rem;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+
+        .progress-ring {
+            width: 120px;
+            height: 120px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 8;
+        }
+
+        .progress-ring-progress {
+            fill: none;
+            stroke: #4ecdc4;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s ease;
+            filter: drop-shadow(0 0 10px #4ecdc4);
+        }
+
+        .angle-display {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .dual-angles {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .angle-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #4ecdc4;
+            text-shadow: 0 2px 10px rgba(78, 205, 196, 0.5);
+        }
+
+        .angle-label {
+            color: white;
+            opacity: 0.8;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            color: white;
+            box-shadow: 0 10px 25px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #4ecdc4, #6ee8dd);
+            color: white;
+            box-shadow: 0 10px 25px rgba(78, 205, 196, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(78, 205, 196, 0.4);
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status.ready {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+            border: 2px solid rgba(78, 205, 196, 0.5);
+        }
+
+        .status.exercising {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            border: 2px solid rgba(255, 107, 107, 0.5);
+            animation: glow 2s infinite alternate;
+        }
+
+        .status.complete {
+            background: rgba(46, 213, 115, 0.2);
+            color: #2ed573;
+            border: 2px solid rgba(46, 213, 115, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 20px rgba(255, 107, 107, 0.3); }
+            100% { box-shadow: 0 0 30px rgba(255, 107, 107, 0.6); }
+        }
+
+        .celebration {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: #ffd700;
+            animation: celebrate 1s ease-out;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        @keyframes celebrate {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2) rotate(180deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(360deg); opacity: 0; }
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin: 20px 0;
+        }
+
+        .pose-points {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .exercise-area {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .rep-number {
+                font-size: 3rem;
+            }
+            
+            .dual-angles {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Shoulder Exercise Tracker</h1>
+        
+        <div class="exercise-area">
+            <div class="video-container">
+                <video id="videoElement" autoplay muted playsinline></video>
+                <canvas id="canvas"></canvas>
+                <div class="pose-points" id="poseStatus">Initializing...</div>
+            </div>
+            
+            <div class="stats-panel">
+                <div class="rep-counter">
+                    <div class="rep-number" id="repCount">0</div>
+                    <div class="rep-label">/ 10 Reps</div>
+                </div>
+                
+                <div class="progress-ring">
+                    <svg>
+                        <circle class="progress-ring-circle" cx="60" cy="60" r="52"></circle>
+                        <circle class="progress-ring-progress" id="progressCircle" cx="60" cy="60" r="52" 
+                                stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+                    </svg>
+                </div>
+                
+                <div class="angle-display">
+                    <div class="dual-angles">
+                        <div>
+                            <div class="angle-value" id="leftShoulderAngle">--°</div>
+                            <div class="angle-label">Left Shoulder</div>
+                        </div>
+                        <div>
+                            <div class="angle-value" id="rightShoulderAngle">--°</div>
+                            <div class="angle-label">Right Shoulder</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status ready" id="exerciseStatus">Ready to Start</div>
+                
+                <div class="controls">
+                    <button class="btn btn-primary" id="startBtn">Start</button>
+                    <button class="btn btn-secondary" id="resetBtn">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ShoulderExerciseTracker {
+            constructor() {
+                this.video = document.getElementById('videoElement');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.repCount = 0;
+                this.isExercising = false;
+                this.leftShoulderAngle = 0;
+                this.rightShoulderAngle = 0;
+                this.isArmsRaised = false;
+                this.raiseThreshold = 45; 
+                this.lowerThreshold = 15;
+                
+                this.pose = null;
+                this.camera = null;
+                
+                this.initializeElements();
+                this.setupCamera();
+                this.setupPoseDetection();
+                this.bindEvents();
+            }
+            
+            initializeElements() {
+                this.repCountEl = document.getElementById('repCount');
+                this.leftShoulderAngleEl = document.getElementById('leftShoulderAngle');
+                this.rightShoulderAngleEl = document.getElementById('rightShoulderAngle');
+                this.statusEl = document.getElementById('exerciseStatus');
+                this.startBtn = document.getElementById('startBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.progressCircle = document.getElementById('progressCircle');
+                this.poseStatusEl = document.getElementById('poseStatus');
+            }
+            
+            async setupCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: 640, height: 480, facingMode: 'user' }
+                    });
+                    this.video.srcObject = stream;
+                    
+                    this.video.addEventListener('loadedmetadata', () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                    });
+                } catch (error) {
+                    console.error('Camera access error:', error);
+                    this.statusEl.textContent = 'Camera Access Required';
+                    this.statusEl.className = 'status';
+                    this.poseStatusEl.textContent = 'Camera Error';
+                }
+            }
+            
+            async setupPoseDetection() {
+                this.pose = new Pose({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+                    }
+                });
+                
+                this.pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    enableSegmentation: false,
+                    smoothSegmentation: false,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                
+                this.pose.onResults((results) => {
+                    this.processPoseResults(results);
+                });
+                
+                this.camera = new Camera(this.video, {
+                    onFrame: async () => {
+                        await this.pose.send({ image: this.video });
+                    },
+                    width: 640,
+                    height: 480
+                });
+                
+                await this.camera.start();
+                this.poseStatusEl.textContent = 'Pose Detection Ready';
+            }
+            
+            processPoseResults(results) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                if (results.poseLandmarks && results.poseLandmarks.length > 0) {
+                    this.drawPoseOverlay(results.poseLandmarks);
+                    
+                    if (this.isExercising) {
+                        this.calculateShoulderAngles(results.poseLandmarks);
+                        this.checkShoulderMovement();
+                    }
+                    
+                    this.poseStatusEl.textContent = 'Pose Detected';
+                } else {
+                    this.poseStatusEl.textContent = 'No Pose Detected';
+                    this.leftShoulderAngleEl.textContent = '--°';
+                    this.rightShoulderAngleEl.textContent = '--°';
+                }
+            }
+            
+            calculateShoulderAngles(landmarks) {
+                
+                const leftShoulder = landmarks[11];
+                const rightShoulder = landmarks[12];
+                const leftElbow = landmarks[13];
+                const rightElbow = landmarks[14];
+                const leftWrist = landmarks[15];
+                const rightWrist = landmarks[16];
+                const leftHip = landmarks[23];
+                const rightHip = landmarks[24];
+                
+              
+                
+                this.leftShoulderAngle = this.calculateAngle(leftHip, leftShoulder, leftElbow);
+                this.rightShoulderAngle = this.calculateAngle(rightHip, rightShoulder, rightElbow);
+                
+    
+                
+                this.updateAngleDisplay();
+            }
+            
+            calculateAngle(point1, point2, point3) {
+             
+                
+                const radians = Math.atan2(point3.y - point2.y, point3.x - point2.x) - 
+                              Math.atan2(point1.y - point2.y, point1.x - point2.x);
+                let angle = Math.abs(radians * 180.0 / Math.PI);
+                
+                if (angle > 180.0) {
+                    angle = 360.0 - angle;
+                }
+                
+                return angle;
+            }
+            
+            updateAngleDisplay() {
+                this.leftShoulderAngleEl.textContent = Math.round(this.leftShoulderAngle) + '°';
+                this.rightShoulderAngleEl.textContent = Math.round(this.rightShoulderAngle) + '°';
+                
+                
+                const avgAngle = (this.leftShoulderAngle + this.rightShoulderAngle) / 2;
+                
+                if (avgAngle > this.raiseThreshold) {
+                    this.leftShoulderAngleEl.style.color = '#ff6b6b';
+                    this.rightShoulderAngleEl.style.color = '#ff6b6b';
+                } else if (avgAngle < this.lowerThreshold) {
+                    this.leftShoulderAngleEl.style.color = '#4ecdc4';
+                    this.rightShoulderAngleEl.style.color = '#4ecdc4';
+                } else {
+                    this.leftShoulderAngleEl.style.color = '#ffd700';
+                    this.rightShoulderAngleEl.style.color = '#ffd700';
+                }
+            }
+            
+            checkShoulderMovement() {
+                const avgAngle = (this.leftShoulderAngle + this.rightShoulderAngle) / 2;
+                
+                if (!this.isArmsRaised && avgAngle > this.raiseThreshold) {
+                    this.isArmsRaised = true;
+                    this.statusEl.textContent = 'Arms Raised';
+                } else if (this.isArmsRaised && avgAngle < this.lowerThreshold) {
+                    this.isArmsRaised = false;
+                    this.completeRep();
+                }
+            }
+            
+            completeRep() {
+                this.repCount++;
+                this.repCountEl.textContent = this.repCount;
+                this.updateProgress();
+                
+                this.showCelebration();
+                
+                if (this.repCount >= 10) {
+                    this.completeExercise();
+                } else {
+                    this.statusEl.textContent = `Rep ${this.repCount} Complete!`;
+                    setTimeout(() => {
+                        if (this.isExercising) {
+                            this.statusEl.textContent = 'Keep Going!';
+                        }
+                    }, 1000);
+                }
+            }
+            
+            updateProgress() {
+                const progress = (this.repCount / 10) * 100;
+                const circumference = 326.7;
+                const offset = circumference - (progress / 100) * circumference;
+                this.progressCircle.style.strokeDashoffset = offset;
+            }
+            
+            showCelebration() {
+                const celebration = document.createElement('div');
+                celebration.className = 'celebration';
+                celebration.textContent = '';
+                document.body.appendChild(celebration);
+                
+                setTimeout(() => {
+                    celebration.remove();
+                }, 1000);
+            }
+            
+            completeExercise() {
+                this.isExercising = false;
+                this.statusEl.textContent = 'Exercise Complete!';
+                this.statusEl.className = 'status complete';
+                this.startBtn.textContent = 'Start New Session';
+                this.startBtn.disabled = false;
+                
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => this.showCelebration(), i * 200);
+                }
+            }
+            
+            drawPoseOverlay(landmarks) {
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+                
+        
+                const connections = [
+                    [11, 12],
+                    [11, 13], [13, 15],
+                    [12, 14], [14, 16], 
+                    [11, 23], [12, 24], 
+                    [23, 24] 
+                ];
+                
+                this.ctx.strokeStyle = '#4ecdc4';
+                this.ctx.lineWidth = 3;
+                this.ctx.lineCap = 'round';
+                
+                connections.forEach(([start, end]) => {
+                    const startPoint = landmarks[start];
+                    const endPoint = landmarks[end];
+                    
+                    if (startPoint && endPoint) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(startPoint.x * width, startPoint.y * height);
+                        this.ctx.lineTo(endPoint.x * width, endPoint.y * height);
+                        this.ctx.stroke();
+                    }
+                });
+                
+               
+                const keyPoints = [11, 12, 13, 14, 15, 16, 23, 24];
+                keyPoints.forEach(index => {
+                    const point = landmarks[index];
+                    if (point) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(point.x * width, point.y * height, 8, 0, 2 * Math.PI);
+                        this.ctx.fillStyle = '#ff6b6b';
+                        this.ctx.fill();
+                        
+                        this.ctx.beginPath();
+                        this.ctx.arc(point.x * width, point.y * height, 8, 0, 2 * Math.PI);
+                        this.ctx.strokeStyle = 'white';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.stroke();
+                    }
+                });
+                
+               
+                [11, 12].forEach(index => {
+                    const point = landmarks[index];
+                    if (point) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(point.x * width, point.y * height, 20, 0, 2 * Math.PI);
+                        this.ctx.strokeStyle = this.isArmsRaised ? '#ff6b6b' : '#4ecdc4';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.setLineDash([5, 5]);
+                        this.ctx.stroke();
+                        this.ctx.setLineDash([]);
+                    }
+                });
+            }
+            
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => {
+                    if (!this.isExercising) {
+                        this.startExercise();
+                    }
+                });
+                
+                this.resetBtn.addEventListener('click', () => {
+                    this.resetExercise();
+                });
+            }
+            
+            startExercise() {
+                this.isExercising = true;
+                this.statusEl.textContent = 'Exercising...';
+                this.statusEl.className = 'status exercising';
+                this.startBtn.textContent = 'Exercising...';
+                this.startBtn.disabled = true;
+            }
+            
+            resetExercise() {
+                this.isExercising = false;
+                this.repCount = 0;
+                this.isArmsRaised = false;
+                this.repCountEl.textContent = '0';
+                this.leftShoulderAngleEl.textContent = '--°';
+                this.rightShoulderAngleEl.textContent = '--°';
+                this.statusEl.textContent = 'Ready to Start';
+                this.statusEl.className = 'status ready';
+                this.startBtn.textContent = 'Start';
+                this.startBtn.disabled = false;
+                this.updateProgress();
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
+        
+    
+        window.addEventListener('load', () => {
+            new ShoulderExerciseTracker();
+        });
+    </script>
+</body>
+</html>
