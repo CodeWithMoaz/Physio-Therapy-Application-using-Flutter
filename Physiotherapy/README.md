@@ -118,7 +118,7 @@ Clone the repository and install the Flutter dependencies:
 
 ```bash
 git clone <repository-url>
-cd physiotherapy
+cd Physiotherapy
 flutter pub get
 ```
 
